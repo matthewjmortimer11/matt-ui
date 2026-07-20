@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "matt-ui",
+  "homepage": "https://matthewjmortimer11.github.io/matt-ui",
+  "items": [
+    {
+      "name": "liquid-glass",
+      "type": "registry:component",
+      "title": "Liquid Glass",
+      "description": "Interactive liquid-glass surface: velocity-reactive SVG displacement, cursor rim light, specular highlight, 3D tilt, living turbulence. Zero dependencies. Chromium gets full displacement; other browsers degrade to frosted glass.",
+      "files": [
+        {
+          "path": "components/liquid-glass.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}

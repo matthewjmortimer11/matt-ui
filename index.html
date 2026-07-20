@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liquid Glass v2 — interactive displacement</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #08080a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #fafafa;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Beams background canvas ---------- */
+  #beams { position: fixed; inset: 0; filter: blur(15px); z-index: 0; }
+
+  /* ---------- Drifting orbs — high-contrast shapes so refraction is visible ---------- */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    filter: blur(2px);
+  }
+  .orb-1 {
+    width: 160px; height: 160px;
+    background: radial-gradient(circle at 35% 35%, #7dd3fc, #0369a1 70%, transparent 72%);
+    animation: drift1 26s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 100px; height: 100px;
+    background: radial-gradient(circle at 35% 35%, #f0abfc, #86198f 70%, transparent 72%);
+    animation: drift2 21s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 60px; height: 60px;
+    background: radial-gradient(circle at 35% 35%, #6ee7b7, #065f46 70%, transparent 72%);
+    animation: drift3 17s ease-in-out infinite;
+  }
+  @keyframes drift1 {
+    0%,100% { top: 18%; left: 28%; } 50% { top: 52%; left: 62%; }
+  }
+  @keyframes drift2 {
+    0%,100% { top: 60%; left: 66%; } 50% { top: 24%; left: 34%; }
+  }
+  @keyframes drift3 {
+    0%,100% { top: 30%; left: 58%; } 50% { top: 62%; left: 30%; }
+  }
+
+  main {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 44px;
+    padding: 72px 24px;
+    perspective: 1100px;
+  }
+
+  .shimmer {
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    background: linear-gradient(to right, #fff, #52525b, #fff);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2.5s linear infinite;
+  }
+  @keyframes shimmer {
+    from { background-position: 200% center; }
+    to   { background-position: -200% center; }
+  }
+  .caption { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-top: -30px; }
+
+  /* ---------- Liquid glass card v2 ---------- */
+  .glass-card {
+    --mx: 50%;          /* specular position */
+    --my: 50%;
+    --angle: 135deg;    /* rim light direction */
+    position: relative;
+    width: min(400px, 92vw);
+    padding: 30px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(1.5px) url(#liquid-card) saturate(1.25) brightness(1.05);
+    -webkit-backdrop-filter: blur(1.5px) url(#liquid-card) saturate(1.25) brightness(1.05);
+    /* soft frost body — the crisp edge comes from the conic rim below */
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.2),
+      0 16px 40px -12px rgba(0,0,0,0.5),
+      inset 0 0 6px 6px rgba(255,255,255,0.09),
+      inset 0 0 2px 2px rgba(255,255,255,0.05);
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transform-style: preserve-3d;
+    will-change: transform;
+    touch-action: none;
+  }
+
+  /* cursor-tracking rim light: conic gradient masked to a 1.5px ring */
+  .glass-card .rim {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(
+      from var(--angle),
+      rgba(255,255,255,0.95) 0deg,
+      rgba(255,255,255,0.12) 70deg,
+      rgba(255,255,255,0.35) 180deg,   /* faint bounce-light opposite the source */
+      rgba(255,255,255,0.12) 290deg,
+      rgba(255,255,255,0.95) 360deg
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* cursor-following specular highlight */
+  .glass-card .spec {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      240px circle at var(--mx) var(--my),
+      rgba(255,255,255,0.14),
+      rgba(255,255,255,0.045) 40%,
+      transparent 65%
+    );
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  .glass-card:hover .spec { opacity: 1; }
+
+  /* content floats above the glass plane for parallax */
+  .glass-card .content {
+    position: relative;
+    transform: translateZ(34px);
+  }
+  .glass-card h2 { font-size: 1.15rem; font-weight: 600; }
+  .glass-card p  { font-size: 0.875rem; line-height: 1.5; color: rgba(255,255,255,0.55); margin-top: 6px; }
+
+  .stats {
+    display: flex;
+    gap: 22px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.09);
+  }
+  .stat b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.4); }
+
+  .glass-btn {
+    position: relative;
+    margin-top: 20px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: url(#liquid-btn);
+    -webkit-backdrop-filter: url(#liquid-btn);
+    color: #fafafa;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow:
+      inset 3px 3px 0.5px -3.5px rgba(255,255,255,0.09),
+      inset -3px -3px 0.5px -3.5px rgba(255,255,255,0.85),
+      inset 1px 1px 1px -0.5px rgba(255,255,255,0.6),
+      inset -1px -1px 1px -0.5px rgba(255,255,255,0.6),
+      inset 0 0 6px 6px rgba(255,255,255,0.12),
+      0 0 12px rgba(0,0,0,0.15);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* springy overshoot */
+  }
+  .glass-btn:hover  { transform: scale(1.06); }
+  .glass-btn:active { transform: scale(0.94); }
+
+  .hint { font-size: 0.72rem; color: rgba(255,255,255,0.3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer, .orb { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  Displacement filters.
+  v2: the card filter's feTurbulence baseFrequency and feDisplacementMap scale
+  are driven from JS every frame — idle "breathing" + mouse-velocity surge.
+-->
+<svg style="position:absolute; width:0; height:0" aria-hidden="true">
+  <defs>
+    <filter id="liquid-card" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feTurbulence id="cardTurb" type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="3" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="2" result="soft"/>
+      <feDisplacementMap id="cardDisp" in="SourceGraphic" in2="soft" scale="18" xChannelSelector="R" yChannelSelector="B" result="displaced"/>
+      <feGaussianBlur in="displaced" stdDeviation="3"/>
+    </filter>
+    <filter id="liquid-btn" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves="1" seed="1" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="2" result="soft"/>
+      <feDisplacementMap id="btnDisp" in="SourceGraphic" in2="soft" scale="70" xChannelSelector="R" yChannelSelector="B" result="displaced"/>
+      <feGaussianBlur in="displaced" stdDeviation="4"/>
+    </filter>
+  </defs>
+</svg>
+
+<canvas id="beams"></canvas>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<main>
+  <h1 class="shimmer">Liquid Glass v2</h1>
+  <p class="caption">velocity-reactive displacement · cursor rim light · specular · 3D tilt · living turbulence</p>
+
+  <div class="glass-card" id="card">
+    <div class="rim"></div>
+    <div class="spec"></div>
+    <div class="content">
+      <h2>Reactive Glass</h2>
+      <p>Move your cursor across me — slow moves barely ripple, fast swipes make the glass churn. The bright edge of the rim follows your cursor like a light source, and the whole pane tilts in 3D.</p>
+      <div class="stats">
+        <div class="stat"><b id="dispReadout">18</b><span>disp scale</span></div>
+        <div class="stat"><b id="velReadout">0</b><span>px / frame</span></div>
+        <div class="stat"><b>60</b><span>fps target</span></div>
+      </div>
+      <button class="glass-btn" id="surgeBtn">Press for surge</button>
+    </div>
+  </div>
+
+  <p class="hint">tip: swipe fast across the card, then hold still and watch it settle</p>
+</main>
+
+<script>
+/* ================= Beams background (unchanged recipe) ================= */
+const canvas = document.getElementById("beams");
+const ctx = canvas.getContext("2d");
+let beams = [];
+
+function createBeam(w, h) {
+  return {
+    x: Math.random() * w * 1.5 - w * 0.25,
+    y: Math.random() * h * 1.5 - h * 0.25,
+    width: 30 + Math.random() * 60,
+    length: h * 2.5,
+    angle: -35 + Math.random() * 10,
+    speed: 0.6 + Math.random() * 1.2,
+    opacity: 0.12 + Math.random() * 0.16,
+    hue: 190 + Math.random() * 70,
+    pulse: Math.random() * Math.PI * 2,
+    pulseSpeed: 0.02 + Math.random() * 0.03,
+  };
+}
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = innerWidth * dpr;
+  canvas.height = innerHeight * dpr;
+  canvas.style.width = innerWidth + "px";
+  canvas.style.height = innerHeight + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  beams = Array.from({ length: 24 }, () => createBeam(innerWidth, innerHeight));
+}
+resize();
+addEventListener("resize", resize);
+
+function drawBeams() {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  ctx.filter = "blur(35px)";
+  beams.forEach((beam, i) => {
+    beam.y -= beam.speed;
+    beam.pulse += beam.pulseSpeed;
+    if (beam.y + beam.length < -100) {
+      const spacing = innerWidth / 3;
+      beam.y = innerHeight + 100;
+      beam.x = (i % 3) * spacing + spacing / 2 + (Math.random() - 0.5) * spacing * 0.5;
+      beam.hue = 190 + (i * 70) / beams.length;
+    }
+    const op = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2);
+    ctx.save();
+    ctx.translate(beam.x, beam.y);
+    ctx.rotate((beam.angle * Math.PI) / 180);
+    const g = ctx.createLinearGradient(0, 0, 0, beam.length);
+    g.addColorStop(0,   `hsla(${beam.hue}, 85%, 65%, 0)`);
+    g.addColorStop(0.1, `hsla(${beam.hue}, 85%, 65%, ${op * 0.5})`);
+    g.addColorStop(0.4, `hsla(${beam.hue}, 85%, 65%, ${op})`);
+    g.addColorStop(0.6, `hsla(${beam.hue}, 85%, 65%, ${op})`);
+    g.addColorStop(0.9, `hsla(${beam.hue}, 85%, 65%, ${op * 0.5})`);
+    g.addColorStop(1,   `hsla(${beam.hue}, 85%, 65%, 0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
+    ctx.restore();
+  });
+}
+
+/* ================= Interactive liquid glass ================= */
+const card = document.getElementById("card");
+const cardTurb = document.getElementById("cardTurb");
+const cardDisp = document.getElementById("cardDisp");
+const btnDisp = document.getElementById("btnDisp");
+const dispReadout = document.getElementById("dispReadout");
+const velReadout = document.getElementById("velReadout");
+
+const BASE_SCALE = 18;      // resting displacement
+const MAX_SCALE = 140;      // full churn
+const BTN_BASE = 70;
+
+// animated state (current) vs targets — everything lerps for smoothness
+let dispScale = BASE_SCALE, dispTarget = BASE_SCALE;
+let btnScale = BTN_BASE, btnTarget = BTN_BASE;
+let rx = 0, ry = 0, rxT = 0, ryT = 0;   // tilt
+let lastX = null, lastY = null, velocity = 0;
+let t = 0;
+
+card.addEventListener("pointermove", (e) => {
+  window.__glassDebug.moveCount++;
+  const rect = card.getBoundingClientRect();
+  const px = (e.clientX - rect.left) / rect.width;    // 0..1
+  const py = (e.clientY - rect.top) / rect.height;
+
+  /* velocity -> displacement surge */
+  if (lastX !== null) {
+    const v = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+    velocity = velocity * 0.8 + v * 0.2;              // smoothed
+    dispTarget = Math.min(MAX_SCALE, BASE_SCALE + velocity * 4);
+  }
+  lastX = e.clientX; lastY = e.clientY;
+
+  /* 3D tilt toward cursor (clamped — out-of-range coords can't over-rotate) */
+  rxT = Math.max(-10, Math.min(10, (0.5 - py) * 10));   // deg
+  ryT = Math.max(-12, Math.min(12, (px - 0.5) * 12));
+
+  /* specular highlight position */
+  card.style.setProperty("--mx", `${px * 100}%`);
+  card.style.setProperty("--my", `${py * 100}%`);
+
+  /* rim light: bright segment points at the cursor.
+     conic-gradient 0deg = top, clockwise — atan2 measured from center */
+  const cx = px - 0.5, cy = py - 0.5;
+  const deg = Math.atan2(cx, -cy) * (180 / Math.PI);  // 0 = up
+  card.style.setProperty("--angle", `${deg}deg`);
+});
+
+card.addEventListener("pointerleave", () => {
+  lastX = lastY = null;
+  rxT = ryT = 0;
+  dispTarget = BASE_SCALE;
+  card.style.setProperty("--angle", "135deg");
+  window.__glassDebug.leaveCount++;
+});
+
+/* debug/inspection hook */
+window.__glassDebug = {
+  moveCount: 0,
+  leaveCount: 0,
+  state: () => ({ dispScale, dispTarget, velocity, rx, ry, rxT, ryT }),
+};
+
+/* press surge on the button — glass "squishes" */
+const surgeBtn = document.getElementById("surgeBtn");
+surgeBtn.addEventListener("pointerdown", () => { btnTarget = 160; });
+surgeBtn.addEventListener("pointerup",   () => { btnTarget = BTN_BASE; });
+surgeBtn.addEventListener("pointerleave",() => { btnTarget = BTN_BASE; });
+
+/* ================= Single rAF loop drives everything ================= */
+let frame = 0;
+function tick() {
+  frame++;
+  t += 0.016;
+
+  drawBeams();
+
+  /* decay: surge always falls back toward rest */
+  dispTarget += (BASE_SCALE - dispTarget) * 0.03;
+  velocity *= 0.92;
+
+  /* lerp current values toward targets */
+  dispScale += (dispTarget - dispScale) * 0.12;
+  btnScale += (btnTarget - btnScale) * 0.18;
+  rx += (rxT - rx) * 0.1;
+  ry += (ryT - ry) * 0.1;
+
+  card.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
+  card.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
+
+  /* SVG filter attributes are live — backdrop re-renders on change.
+     Throttled to every 2nd frame: filter regeneration is the expensive bit. */
+  if (frame % 2 === 0) {
+    cardDisp.setAttribute("scale", dispScale.toFixed(1));
+    btnDisp.setAttribute("scale", btnScale.toFixed(1));
+
+    /* living turbulence: slow asymmetric breathing of the noise field */
+    const bfx = 0.05 + Math.sin(t * 0.7) * 0.006;
+    const bfy = 0.05 + Math.cos(t * 0.9) * 0.006;
+    cardTurb.setAttribute("baseFrequency", `${bfx.toFixed(4)} ${bfy.toFixed(4)}`);
+
+    dispReadout.textContent = Math.round(dispScale);
+    velReadout.textContent = Math.round(velocity);
+  }
+
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
