@@ -26,6 +26,18 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "ai-voice",
+      "type": "registry:component",
+      "title": "AI Voice",
+      "description": "Voice-recording UI with a genuinely audio-reactive waveform: getUserMedia → AnalyserNode frequency data driving bar heights via rAF. Falls back to a demo signal without a mic, calms under prefers-reduced-motion. Zero dependencies.",
+      "files": [
+        {
+          "path": "components/ai-voice.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

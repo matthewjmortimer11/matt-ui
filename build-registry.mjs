@@ -17,6 +17,12 @@ const COMPONENTS = [
     description:
       "3D flip card: perspective + preserve-3d + backface-visibility, staggered content cascade on the back face, accent-colored orb animation on the front. Hover, tap, and keyboard accessible. Zero dependencies.",
   },
+  {
+    name: "ai-voice",
+    title: "AI Voice",
+    description:
+      "Voice-recording UI with a genuinely audio-reactive waveform: getUserMedia → AnalyserNode frequency data driving bar heights via rAF. Falls back to a demo signal without a mic, calms under prefers-reduced-motion. Zero dependencies.",
+  },
 ];
 
 mkdirSync("r", { recursive: true });

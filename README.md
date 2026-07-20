@@ -64,6 +64,32 @@ import { CardFlip } from "@/components/card-flip";
 | `children` | — | custom front-face content (replaces the orb animation) — e.g. a price, a quote, any JSX |
 | `glass` | `false` | experimental: liquid-glass faces (feTurbulence displacement backdrop). Chromium-only liquid; frosted fallback elsewhere |
 
+### AI Voice
+
+Voice-recording UI with a **genuinely audio-reactive** waveform (Kokonut's fakes it): `getUserMedia` → `AnalyserNode` frequency data → bar heights via rAF. Demo signal starts instantly on click (so the UI responds even while the permission prompt is open), upgrades to the real spectrum when the mic is granted, and calms under `prefers-reduced-motion`. Zero dependencies.
+
+```bash
+npx shadcn@latest add https://matthewjmortimer11.github.io/matt-ui/r/ai-voice.json
+```
+
+```tsx
+import { AIVoice } from "@/components/ai-voice";
+
+<AIVoice
+  accent="#7dd3fc"
+  onStart={(stream) => {/* stream is the live MediaStream, or null in demo tier */}}
+  onStop={() => {}}
+/>
+```
+
+| Prop | Default | Does |
+|---|---|---|
+| `accent` | white-ish | color for active bars, timer, spinner |
+| `barCount` | 48 | waveform bars |
+| `onStart(stream)` | — | fires with the `MediaStream` (or `null` if mic unavailable) |
+| `onStop` | — | fires when recording stops |
+| `idleLabel` / `activeLabel` / `demoLabel` | sensible strings | status text |
+
 ## Namespace install
 
 Add to your project's `components.json`:
