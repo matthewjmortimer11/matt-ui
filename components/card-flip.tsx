@@ -29,6 +29,8 @@ export interface CardFlipProps extends HTMLAttributes<HTMLDivElement> {
   width?: number | string;
   height?: number | string;
   onAction?: () => void;
+  /** Custom front-face content. Replaces the default orb animation. */
+  children?: React.ReactNode;
 }
 
 const ArrowIcon = ({ size = 14, style }: { size?: number; style?: CSSProperties }) => (
@@ -56,6 +58,7 @@ export function CardFlip({
   width = 280,
   height = 320,
   onAction,
+  children,
   style,
   ...props
 }: CardFlipProps) {
@@ -130,32 +133,39 @@ export function CardFlip({
       >
         {/* ---------- front ---------- */}
         <div style={{ ...face, transform: "rotateY(0deg)", opacity: flipped ? 0 : 1 }}>
-          {/* decorative orb cascade */}
-          <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", paddingTop: 90 }}>
-            <div style={{ position: "relative", width: 200, height: 100 }}>
-              {Array.from({ length: 10 }, (_, i) => (
-                <div
-                  key={i}
-                  className="cf-orb"
-                  style={{
-                    position: "absolute",
-                    inset: "25px 75px",
-                    width: 50,
-                    height: 50,
-                    borderRadius: "50%",
-                    opacity: 0,
-                    /* longhands only — mixing the `animation` shorthand with
-                       animationDelay makes React warn on rerender */
-                    animationName: "cf-orb",
-                    animationDuration: `${flipped ? 2 : 3}s`,
-                    animationTimingFunction: "linear",
-                    animationIterationCount: "infinite",
-                    animationDelay: `${i * 0.3}s`,
-                  }}
-                />
-              ))}
+          {children ? (
+            /* custom front content */
+            <div style={{ position: "absolute", inset: 0, padding: 22, paddingBottom: 76, overflow: "hidden" }}>
+              {children}
             </div>
-          </div>
+          ) : (
+            /* default: decorative orb cascade */
+            <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center", paddingTop: 90 }}>
+              <div style={{ position: "relative", width: 200, height: 100 }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="cf-orb"
+                    style={{
+                      position: "absolute",
+                      inset: "25px 75px",
+                      width: 50,
+                      height: 50,
+                      borderRadius: "50%",
+                      opacity: 0,
+                      /* longhands only — mixing the `animation` shorthand with
+                         animationDelay makes React warn on rerender */
+                      animationName: "cf-orb",
+                      animationDuration: `${flipped ? 2 : 3}s`,
+                      animationTimingFunction: "linear",
+                      animationIterationCount: "infinite",
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
             <div>

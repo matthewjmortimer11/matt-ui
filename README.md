@@ -61,6 +61,7 @@ import { CardFlip } from "@/components/card-flip";
 | `accent` | `"#f97316"` | any CSS color for glow/icons/hover |
 | `actionLabel` / `onAction` | `"Start today"` | back-face action row |
 | `width` / `height` | 280 / 320 | card size |
+| `children` | — | custom front-face content (replaces the orb animation) — e.g. a price, a quote, any JSX |
 
 ## Namespace install
 
