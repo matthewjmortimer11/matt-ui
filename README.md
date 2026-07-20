@@ -62,6 +62,7 @@ import { CardFlip } from "@/components/card-flip";
 | `actionLabel` / `onAction` | `"Start today"` | back-face action row |
 | `width` / `height` | 280 / 320 | card size |
 | `children` | — | custom front-face content (replaces the orb animation) — e.g. a price, a quote, any JSX |
+| `glass` | `false` | experimental: liquid-glass faces (feTurbulence displacement backdrop). Chromium-only liquid; frosted fallback elsewhere |
 
 ## Namespace install
 

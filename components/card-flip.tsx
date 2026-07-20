@@ -16,7 +16,7 @@
  * Zero dependencies — drops into any React 18+ project, Tailwind or not.
  */
 
-import { useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from "react";
+import { useId, useState, type CSSProperties, type HTMLAttributes, type KeyboardEvent } from "react";
 
 export interface CardFlipProps extends HTMLAttributes<HTMLDivElement> {
   title?: string;
@@ -31,6 +31,9 @@ export interface CardFlipProps extends HTMLAttributes<HTMLDivElement> {
   onAction?: () => void;
   /** Custom front-face content. Replaces the default orb animation. */
   children?: React.ReactNode;
+  /** Liquid-glass faces (feTurbulence displacement backdrop). Chromium-only
+   *  displacement; degrades to frosted blur elsewhere. Experimental. */
+  glass?: boolean;
 }
 
 const ArrowIcon = ({ size = 14, style }: { size?: number; style?: CSSProperties }) => (
@@ -59,11 +62,13 @@ export function CardFlip({
   height = 320,
   onAction,
   children,
+  glass = false,
   style,
   ...props
 }: CardFlipProps) {
   const [flipped, setFlipped] = useState(false);
   const [actionHover, setActionHover] = useState(false);
+  const filterId = `cf-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -78,11 +83,26 @@ export function CardFlip({
     borderRadius: 18,
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "linear-gradient(to bottom, #18181b, #09090b)",
     overflow: "hidden",
     transition: "opacity 0.7s",
     color: "#fafafa",
+    ...(glass
+      ? {
+          background: "rgba(255,255,255,0.055)",
+          backdropFilter: `blur(1.5px) url("#${filterId}") saturate(1.25) brightness(1.05)`,
+          WebkitBackdropFilter: `blur(1.5px) url("#${filterId}") saturate(1.25) brightness(1.05)`,
+          boxShadow: [
+            "0 2px 6px rgba(0,0,0,0.2)",
+            "0 16px 40px -12px rgba(0,0,0,0.5)",
+            "inset 0 0 6px 6px rgba(255,255,255,0.09)",
+            "inset 0 0 2px 2px rgba(255,255,255,0.05)",
+          ].join(", "),
+          border: "1px solid rgba(255,255,255,0.14)",
+        }
+      : {
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "linear-gradient(to bottom, #18181b, #09090b)",
+        }),
   };
 
   const muted: CSSProperties = { fontSize: 13, lineHeight: 1.5, color: "rgba(255,255,255,0.55)" };
@@ -109,6 +129,19 @@ export function CardFlip({
       }}
       {...props}
     >
+      {glass && (
+        <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
+          <defs>
+            <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
+              <feTurbulence type="fractalNoise" baseFrequency="0.05 0.05" numOctaves={1} seed={3} result="noise" />
+              <feGaussianBlur in="noise" stdDeviation={2} result="soft" />
+              <feDisplacementMap in="SourceGraphic" in2="soft" scale={18} xChannelSelector="R" yChannelSelector="B" result="displaced" />
+              <feGaussianBlur in="displaced" stdDeviation={3} />
+            </filter>
+          </defs>
+        </svg>
+      )}
+
       <style>{`
         @keyframes cf-orb {
           0%   { transform: scale(2);                  opacity: 0; box-shadow: 0 0 50px var(--cf-glow); }
