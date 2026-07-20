@@ -20,8 +20,6 @@
  */
 
 import {
-  createContext,
-  useContext,
   useEffect,
   useId,
   useRef,
@@ -32,28 +30,23 @@ import {
 
 /* ---------------------------------- filter ---------------------------------- */
 
-interface GlassFilterHandles {
-  turbulence: SVGFETurbulenceElement | null;
-  displacement: SVGFEDisplacementMapElement | null;
-}
-
 function GlassFilter({
   id,
   scale,
-  handles,
+  turbulenceRef,
+  displacementRef,
 }: {
   id: string;
   scale: number;
-  handles?: React.MutableRefObject<GlassFilterHandles>;
+  turbulenceRef?: React.RefObject<SVGFETurbulenceElement | null>;
+  displacementRef?: React.RefObject<SVGFEDisplacementMapElement | null>;
 }) {
   return (
     <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
       <defs>
         <filter id={id} x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
           <feTurbulence
-            ref={(el) => {
-              if (handles) handles.current.turbulence = el;
-            }}
+            ref={turbulenceRef}
             type="fractalNoise"
             baseFrequency="0.05 0.05"
             numOctaves={1}
@@ -62,9 +55,7 @@ function GlassFilter({
           />
           <feGaussianBlur in="noise" stdDeviation={2} result="soft" />
           <feDisplacementMap
-            ref={(el) => {
-              if (handles) handles.current.displacement = el;
-            }}
+            ref={displacementRef}
             in="SourceGraphic"
             in2="soft"
             scale={scale}
@@ -146,7 +137,8 @@ export function LiquidGlass({
 }: LiquidGlassProps) {
   const filterId = `lg-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
   const cardRef = useRef<HTMLDivElement>(null);
-  const filterHandles = useRef<GlassFilterHandles>({ turbulence: null, displacement: null });
+  const turbRef = useRef<SVGFETurbulenceElement | null>(null);
+  const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
 
   // Mutable physics state — lives outside React renders entirely.
   const phys = useRef({
@@ -223,14 +215,11 @@ export function LiquidGlass({
 
       // filter regeneration is the expensive bit — 30Hz is imperceptible
       if (frame % 2 === 0) {
-        filterHandles.current.displacement?.setAttribute("scale", p.dispScale.toFixed(1));
+        dispRef.current?.setAttribute("scale", p.dispScale.toFixed(1));
         if (!reduceMotion) {
           const bfx = 0.05 + Math.sin(p.t * 0.7) * 0.006;
           const bfy = 0.05 + Math.cos(p.t * 0.9) * 0.006;
-          filterHandles.current.turbulence?.setAttribute(
-            "baseFrequency",
-            `${bfx.toFixed(4)} ${bfy.toFixed(4)}`
-          );
+          turbRef.current?.setAttribute("baseFrequency", `${bfx.toFixed(4)} ${bfy.toFixed(4)}`);
         }
       }
       raf = requestAnimationFrame(tick);
@@ -274,7 +263,7 @@ export function LiquidGlass({
           {children}
         </div>
       </div>
-      <GlassFilter id={filterId} scale={baseScale} handles={filterHandles} />
+      <GlassFilter id={filterId} scale={baseScale} turbulenceRef={turbRef} displacementRef={dispRef} />
     </>
   );
 }
@@ -296,7 +285,7 @@ export function LiquidButton({
   ...props
 }: LiquidButtonProps) {
   const filterId = `lgb-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
-  const handles = useRef<GlassFilterHandles>({ turbulence: null, displacement: null });
+  const dispRef = useRef<SVGFEDisplacementMapElement | null>(null);
   const target = useRef(baseScale);
   const current = useRef(baseScale);
 
@@ -304,7 +293,7 @@ export function LiquidButton({
     let raf = 0;
     const tick = () => {
       current.current += (target.current - current.current) * 0.18;
-      handles.current.displacement?.setAttribute("scale", current.current.toFixed(1));
+      dispRef.current?.setAttribute("scale", current.current.toFixed(1));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -348,7 +337,7 @@ export function LiquidButton({
       >
         {children}
       </button>
-      <GlassFilter id={filterId} scale={baseScale} handles={handles} />
+      <GlassFilter id={filterId} scale={baseScale} displacementRef={dispRef} />
     </>
   );
 }

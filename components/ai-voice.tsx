@@ -69,12 +69,9 @@ export function AIVoice({
   }>({ ctx: null, analyser: null, stream: null });
   const rafRef = useRef(0);
 
-  /* timer */
+  /* timer — seconds resets in start(), not here (avoids setState-in-effect) */
   useEffect(() => {
-    if (!recording) {
-      setSeconds(0);
-      return;
-    }
+    if (!recording) return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, [recording]);
@@ -154,6 +151,7 @@ export function AIVoice({
     /* start the demo signal immediately — instant feedback even while the
        mic permission prompt is open (getUserMedia can stay pending forever) */
     activeRef.current = true;
+    setSeconds(0);
     setDemo(true);
     setRecording(true);
 
