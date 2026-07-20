@@ -14,6 +14,18 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "card-flip",
+      "type": "registry:component",
+      "title": "Card Flip",
+      "description": "3D flip card: perspective + preserve-3d + backface-visibility, staggered content cascade on the back face, accent-colored orb animation on the front. Hover, tap, and keyboard accessible. Zero dependencies.",
+      "files": [
+        {
+          "path": "components/card-flip.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }
